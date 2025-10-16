@@ -2,11 +2,10 @@
 #define BACKUP_H
 
 #include <filesystem>
-
+#include <string> 
 namespace fs = std::filesystem;
 
-// 只存放函数的声明
-void pack(const fs::path& source_dir, const fs::path& archive_file_path);
-void unpack(const fs::path& archive_file_path, const fs::path& destination_dir);
+void pack(const fs::path& source_dir, const fs::path& archive_file_path, std::string_view password = "");
 
-#endif // BACKUP_H
+void unpack(const fs::path& archive_file_path, const fs::path& destination_dir, std::string_view password = "");
+#endif 

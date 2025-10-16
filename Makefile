@@ -6,7 +6,7 @@ GTEST_DIR = lib/googletest
 
 # --- 源文件和目标文件 ---
 # 核心逻辑
-CORE_SRC = $(SRCDIR)/backup.cpp
+CORE_SRC = $(SRCDIR)/backup.cpp $(SRCDIR)/crypto.cpp
 CORE_OBJ = $(CORE_SRC:.cpp=.o)
 
 # 主程序
@@ -22,8 +22,10 @@ GTEST_SRCS = $(GTEST_DIR)/googletest/src/gtest-all.cc \
              $(GTEST_DIR)/googletest/src/gtest_main.cc
 GTEST_OBJ = $(GTEST_SRCS:.cc=.o)
 
+LDFLAGS = -lssl -lcrypto
+
 # 头文件
-HEADERS = $(SRCDIR)/backup.h $(SRCDIR)/archive.h
+HEADERS = $(SRCDIR)/backup.h $(SRCDIR)/archive.h $(SRCDIR)/crypto.h
 
 # --- 编译选项 ---
 CPPFLAGS = -I$(SRCDIR) -I$(GTEST_DIR)/googletest/include -I$(GTEST_DIR)/googletest -pthread
@@ -33,11 +35,11 @@ all: $(TARGET) $(TEST_TARGET)
 
 # 链接主程序
 $(TARGET): $(MAIN_OBJ) $(CORE_OBJ)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # 链接测试程序
 $(TEST_TARGET): $(TEST_OBJ) $(CORE_OBJ) $(GTEST_OBJ)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
 
 # 通用编译规则：如何从 .cpp/.cc 生成 .o
 %.o: %.cpp
