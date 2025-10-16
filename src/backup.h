@@ -5,7 +5,8 @@
 
 namespace fs = std::filesystem;
 
-void copyFileContent(const fs::path& from, const fs::path& to);
-void processDirectory(const fs::path& source, const fs::path& destination);
+// 只存放函数的声明
+void pack(const fs::path& source_dir, const fs::path& archive_file_path);
+void unpack(const fs::path& archive_file_path, const fs::path& destination_dir);
 
 #endif // BACKUP_H
