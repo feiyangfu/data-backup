@@ -41,7 +41,7 @@ $(TARGET): $(MAIN_OBJ) $(CORE_OBJ)
 $(TEST_TARGET): $(TEST_OBJ) $(CORE_OBJ) $(GTEST_OBJ)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
 
-# 通用编译规则：如何从 .cpp/.cc 生成 .o
+# 通用编译规则
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 

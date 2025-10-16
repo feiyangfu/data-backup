@@ -30,7 +30,6 @@ bool generate_key_iv(const std::string& password, const unsigned char* salt, uns
     return true;
 }
 
-// --- 这是修复后的 encrypt_file ---
 bool encrypt_file(const fs::path& input_file, const fs::path& output_file, const std::string& password) {
     std::ifstream ifs(input_file, std::ios::binary);
     if (!ifs) {
@@ -62,11 +61,9 @@ bool encrypt_file(const fs::path& input_file, const fs::path& output_file, const
          return false;
     }
     
-    // 关键修复点：这里的逻辑之前是正确的，我们确保它没有被修改
-    // 1. 先把明文的 Header 写入文件
     ofs.write(reinterpret_cast<const char*>(&header), sizeof(header));
     
-    // 2. 然后开始加密循环，将加密后的数据写入文件
+
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx) { handle_openssl_errors(); return false; }
     if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) {
@@ -103,7 +100,6 @@ bool encrypt_file(const fs::path& input_file, const fs::path& output_file, const
     return true;
 }
 
-// --- decrypt_file 保持不变，因为它的逻辑是正确的 ---
 bool decrypt_file(const fs::path& input_file, const fs::path& output_file, const std::string& password) {
     std::ifstream ifs(input_file, std::ios::binary);
     if (!ifs) { 
