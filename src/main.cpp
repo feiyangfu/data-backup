@@ -1,4 +1,4 @@
-#include "backup.h" // 包含所有公开函数的声明
+#include "backup.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -32,7 +32,7 @@ void print_usage(const char* prog_name) {
     std::cerr << "  --exclude=<pattern>       Exclude filter pattern." << std::endl;
 }
 
-// main 函数现在是整个程序的总调度器
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         print_usage(argv[0]);
@@ -72,10 +72,10 @@ int main(int argc, char* argv[]) {
         
         if (command == "pack") {
             pack(source, destination, filters, password, use_compression);
-            success = true; // 假设 pack 内部会处理失败情况
+            success = true; 
         } else {
             unpack(source, destination, password, use_compression);
-            success = true; // 假设 unpack 内部会处理失败情况
+            success = true; 
         }
 
     } else if (command == "auto-backup") {
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
         
         for (int i = 2; i < argc; ++i) {
             std::string arg = argv[i];
-            if (arg.rfind("--", 0) != 0) continue; // 只处理 -- 开头的参数
+            if (arg.rfind("--", 0) != 0) continue;
             
             size_t pos = arg.find('=');
             if (pos == std::string::npos) continue;
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
         }
 
         run_auto_backup(auto_opts);
-        success = true; // 假设 run_auto_backup 内部会处理失败
+        success = true; 
 
     } else {
         std::cerr << "Error: Unknown command '" << command << "'" << std::endl;

@@ -59,7 +59,7 @@ TEST_F(PackUnpackTest, FullCycleValidation) {
     FilterOptions empty_filters;
 
     // 执行打包时，传入这个空的过滤选项
-    pack(source_dir, archive_file, empty_filters); // <-- 传入第3个参数
+    pack(source_dir, archive_file, empty_filters); 
     ASSERT_TRUE(fs::exists(archive_file));
 
     // 执行解包 (unpack 函数的签名我们没有改，所以这里不需要变)

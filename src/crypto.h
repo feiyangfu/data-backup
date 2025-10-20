@@ -11,7 +11,6 @@ const char MAGIC_STRING[] = "CRPTV1";
 const int SALT_SIZE = 16; // 盐的大小
 const int HASH_SIZE = 32; // SHA256 哈希的大小
 
-// 定义在加密文件头部的元数据结构
 struct CryptoHeader {
     char magic[8];         // "CRYPT V1" 魔术字符串，用于识别文件类型
     unsigned char salt[SALT_SIZE];     // 随机生成的盐

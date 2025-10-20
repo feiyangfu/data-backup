@@ -28,8 +28,6 @@ void pack(const fs::path& source_dir, const fs::path& archive_file_path, const F
     fs::path current_input = source_dir;
     fs::path temp_pack_output;
     bool pack_step_done = false;
-
-    // --- 新的流水线逻辑 ---
     
     // 1. 打包
     std::cout << "--> Step 1: Packing files..." << std::endl;
@@ -55,7 +53,7 @@ void pack(const fs::path& source_dir, const fs::path& archive_file_path, const F
              fs::remove(temp_compress_output);
              return;
         }
-        fs::remove(current_input); // 删除上一步的临时文件
+        fs::remove(current_input); 
         current_input = temp_compress_output;
     }
 
@@ -79,8 +77,6 @@ void pack(const fs::path& source_dir, const fs::path& archive_file_path, const F
 void unpack(const fs::path& archive_file_path, const fs::path& destination_dir, std::string_view password, bool use_compression) {
     fs::path current_input = archive_file_path;
     
-    // --- 新的逆向流水线逻辑 ---
-
     // 1. (可选) 解密
     fs::path temp_decrypt_output;
     if (!password.empty()) {
@@ -327,15 +323,13 @@ void unpack_internal(const fs::path& archive_file_path, const fs::path& destinat
     }
     archive_file.close(); // 关闭文件流
 
-    // --- 新增：处理所有待办的硬链接 ---
+    // ---处理所有待办的硬链接 ---
     std::cout << "--> Processing deferred hard links..." << std::endl;
     for (const auto& deferred : deferred_links) {
-        // 检查原始文件是否存在
         if (fs::exists(deferred.link_source)) {
             link(deferred.link_source.c_str(), deferred.link_dest.c_str());
             std::cout << "Created hard link: " << deferred.link_dest << " -> " << deferred.link_source << std::endl;
         } else {
-            // 如果原始文件因为被过滤而根本不存在，我们可以选择创建一个空文件或打印警告
             std::cerr << "Warning: Original file for hard link '" << deferred.link_dest 
                       << "' not found at '" << deferred.link_source << "'. It might have been filtered during backup." << std::endl;
             // 创建一个空文件以作占位

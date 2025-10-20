@@ -1,7 +1,7 @@
 #ifndef FILTER_H
 #define FILTER_H
 
-#include "backup.h" // 包含 FilterOptions 的定义
+#include "backup.h" 
 #include <filesystem>
 #include <sys/stat.h>
 
