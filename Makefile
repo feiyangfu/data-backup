@@ -6,7 +6,7 @@ GTEST_DIR = lib/googletest
 
 # --- 源文件和目标文件 ---
 # 核心逻辑
-CORE_SRC = $(SRCDIR)/backup.cpp $(SRCDIR)/crypto.cpp
+CORE_SRC = $(SRCDIR)/backup.cpp $(SRCDIR)/crypto.cpp $(SRCDIR)/compress.cpp $(SRCDIR)/filter.cpp $(SRCDIR)/auto_backup.cpp
 CORE_OBJ = $(CORE_SRC:.cpp=.o)
 
 # 主程序
@@ -22,10 +22,10 @@ GTEST_SRCS = $(GTEST_DIR)/googletest/src/gtest-all.cc \
              $(GTEST_DIR)/googletest/src/gtest_main.cc
 GTEST_OBJ = $(GTEST_SRCS:.cc=.o)
 
-LDFLAGS = -lssl -lcrypto
+LDFLAGS = -lssl -lcrypto -lz
 
 # 头文件
-HEADERS = $(SRCDIR)/backup.h $(SRCDIR)/archive.h $(SRCDIR)/crypto.h
+HEADERS = $(SRCDIR)/backup.h $(SRCDIR)/archive.h $(SRCDIR)/crypto.h $(SRCDIR)/compress.h $(SRCDIR)/filter.h
 
 # --- 编译选项 ---
 CPPFLAGS = -I$(SRCDIR) -I$(GTEST_DIR)/googletest/include -I$(GTEST_DIR)/googletest -pthread

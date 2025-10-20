@@ -55,11 +55,14 @@ protected:
 
 
 TEST_F(PackUnpackTest, FullCycleValidation) {
-    // 执行打包
-    pack(source_dir, archive_file);
+    // 创建一个空的过滤选项对象
+    FilterOptions empty_filters;
+
+    // 执行打包时，传入这个空的过滤选项
+    pack(source_dir, archive_file, empty_filters); // <-- 传入第3个参数
     ASSERT_TRUE(fs::exists(archive_file));
 
-    // 执行解包
+    // 执行解包 (unpack 函数的签名我们没有改，所以这里不需要变)
     unpack(archive_file, unpack_dir);
     ASSERT_TRUE(fs::exists(unpack_dir));
 
