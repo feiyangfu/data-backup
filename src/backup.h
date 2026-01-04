@@ -38,7 +38,7 @@ struct AutoBackupOptions {
 
 void run_auto_backup(const AutoBackupOptions& options);
 
-void pack(const fs::path& source_dir, const fs::path& archive_file_path, const FilterOptions& filters, std::string_view password = "", bool use_compression = false);
+bool pack(const fs::path& source_dir, const fs::path& archive_file_path, const FilterOptions& filters, std::string_view password = "", bool use_compression = false);
 
-void unpack(const fs::path& archive_file_path, const fs::path& destination_dir, std::string_view password = "", bool use_compression = false);
+bool unpack(const fs::path& archive_file_path, const fs::path& destination_dir, std::string_view password = "", bool use_compression = false);
 #endif 

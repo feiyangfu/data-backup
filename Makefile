@@ -1,6 +1,12 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -g
 
+# 如果在 conda 环境中，使用 conda 的库
+ifdef CONDA_PREFIX
+    CXXFLAGS += -I$(CONDA_PREFIX)/include
+    LDFLAGS_PREFIX = -L$(CONDA_PREFIX)/lib
+endif
+
 SRCDIR = src
 GTEST_DIR = lib/googletest
 
@@ -22,7 +28,7 @@ GTEST_SRCS = $(GTEST_DIR)/googletest/src/gtest-all.cc \
              $(GTEST_DIR)/googletest/src/gtest_main.cc
 GTEST_OBJ = $(GTEST_SRCS:.cc=.o)
 
-LDFLAGS = -lssl -lcrypto -lz
+LDFLAGS = $(LDFLAGS_PREFIX) -lssl -lcrypto -lz
 
 # 头文件
 HEADERS = $(SRCDIR)/backup.h $(SRCDIR)/archive.h $(SRCDIR)/crypto.h $(SRCDIR)/compress.h $(SRCDIR)/filter.h

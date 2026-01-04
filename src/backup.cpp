@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <utime.h>
 #include <dirent.h>
+#include <errno.h>
 
 namespace fs = std::filesystem;
 
@@ -24,10 +25,9 @@ bool pack_internal(const fs::path& source_dir, const fs::path& archive_file_path
 void unpack_internal(const fs::path& archive_file_path, const fs::path& destination_dir);
 void traverseAndPack(const fs::path& base_path, const fs::path& current_path, std::ofstream& archive_file, const Filter& filter);
 
-void pack(const fs::path& source_dir, const fs::path& archive_file_path, const FilterOptions& filters, std::string_view password, bool use_compression) {
+bool pack(const fs::path& source_dir, const fs::path& archive_file_path, const FilterOptions& filters, std::string_view password, bool use_compression) {
     fs::path current_input = source_dir;
     fs::path temp_pack_output;
-    bool pack_step_done = false;
     
     // 1. 打包
     std::cout << "--> Step 1: Packing files..." << std::endl;
@@ -36,10 +36,9 @@ void pack(const fs::path& source_dir, const fs::path& archive_file_path, const F
     if (!pack_internal(current_input, temp_pack_output, filters)) {
         std::cerr << "--> Packing failed." << std::endl;
         fs::remove(temp_pack_output);
-        return;
+        return false;
     }
     current_input = temp_pack_output;
-    pack_step_done = true;
 
     // 2. (可选) 压缩
     fs::path temp_compress_output;
@@ -51,7 +50,7 @@ void pack(const fs::path& source_dir, const fs::path& archive_file_path, const F
              std::cerr << "--> Compression failed." << std::endl;
              fs::remove(current_input);
              fs::remove(temp_compress_output);
-             return;
+             return false;
         }
         fs::remove(current_input); 
         current_input = temp_compress_output;
@@ -63,7 +62,7 @@ void pack(const fs::path& source_dir, const fs::path& archive_file_path, const F
         if (!encrypt_file(current_input, archive_file_path, std::string(password))) {
              std::cerr << "--> Encryption failed." << std::endl;
              fs::remove(current_input);
-             return;
+             return false;
         }
         fs::remove(current_input);
     } else {
@@ -72,9 +71,10 @@ void pack(const fs::path& source_dir, const fs::path& archive_file_path, const F
     }
 
     std::cout << "--> Pack operation completed successfully." << std::endl;
+    return true;
 }
 
-void unpack(const fs::path& archive_file_path, const fs::path& destination_dir, std::string_view password, bool use_compression) {
+bool unpack(const fs::path& archive_file_path, const fs::path& destination_dir, std::string_view password, bool use_compression) {
     fs::path current_input = archive_file_path;
     
     // 1. (可选) 解密
@@ -86,7 +86,7 @@ void unpack(const fs::path& archive_file_path, const fs::path& destination_dir, 
         if(!decrypt_file(current_input, temp_decrypt_output, std::string(password))) {
             std::cerr << "--> Decryption failed." << std::endl;
             fs::remove(temp_decrypt_output);
-            return;
+            return false;
         }
         current_input = temp_decrypt_output;
     }
@@ -101,7 +101,7 @@ void unpack(const fs::path& archive_file_path, const fs::path& destination_dir, 
             std::cerr << "--> Decompression failed." << std::endl;
             if(!password.empty()) fs::remove(current_input); // 清理上一步的临时文件
             fs::remove(temp_decompress_output);
-            return;
+            return false;
         }
         if(!password.empty()) fs::remove(current_input);
         current_input = temp_decompress_output;
@@ -117,6 +117,7 @@ void unpack(const fs::path& archive_file_path, const fs::path& destination_dir, 
     }
 
     std::cout << "--> Unpack operation completed successfully." << std::endl;
+    return true;
 }
 
 
@@ -164,16 +165,19 @@ void traverseAndPack(const fs::path& base_path, const fs::path& current_path, st
         struct stat file_stat;
         if (lstat(full_path.c_str(), &file_stat) != 0) continue;
         
-        if (!S_ISDIR(file_stat.st_mode) && filter.should_skip(full_path, file_stat)) {
-            continue; // 如果是文件且被过滤，则跳过
+        if (!S_ISDIR(file_stat.st_mode) && !S_ISLNK(file_stat.st_mode) && filter.should_skip(full_path, file_stat)) {
+            continue; // 如果是文件且被过滤，则跳过（软链接不过滤，因为它们不占用空间）
         }
 
-        if (S_ISLNK(file_stat.st_mode)) {
-            std::cout << "Skipping symlink: " << full_path.string() << std::endl;
-            continue;
+        // 计算相对路径（不解引用符号链接）
+        fs::path relative_path;
+        if (current_path == base_path) {
+            relative_path = entry->d_name;
+        } else {
+            fs::path current_relative = fs::relative(current_path, base_path);
+            relative_path = current_relative / entry->d_name;
         }
-
-        fs::path relative_path = fs::relative(full_path, base_path);
+        
         strncpy(header.name, relative_path.c_str(), sizeof(header.name) - 1);
         header.name[sizeof(header.name) - 1] = '\0';
         
@@ -184,7 +188,23 @@ void traverseAndPack(const fs::path& base_path, const fs::path& current_path, st
         header.size = 0;
         header.link_target[0] = '\0';
 
-        if (S_ISREG(header.mode)) {
+        // 处理软链接
+        if (S_ISLNK(header.mode)) {
+            char link_buffer[sizeof(header.link_target)];
+            ssize_t len = readlink(full_path.c_str(), link_buffer, sizeof(link_buffer) - 1);
+            if (len != -1) {
+                link_buffer[len] = '\0';
+                strncpy(header.link_target, link_buffer, sizeof(header.link_target) - 1);
+                header.link_target[sizeof(header.link_target) - 1] = '\0';
+                std::cout << "Packed symlink: " << relative_path.string() << " -> " << header.link_target << std::endl;
+            } else {
+                std::cerr << "Warning: Failed to read symlink: " << full_path << std::endl;
+                closedir(dir);
+                return;
+            }
+        }
+        // 处理普通文件（包括硬链接）
+        else if (S_ISREG(header.mode)) {
             header.size = file_stat.st_size;
             if (file_stat.st_nlink > 1) {
                 if (hard_link_map.count(file_stat.st_ino)) {
@@ -198,7 +218,11 @@ void traverseAndPack(const fs::path& base_path, const fs::path& current_path, st
         } 
         
         archive_file.write(reinterpret_cast<const char*>(&header), sizeof(ArchiveHeader));
-        std::cout << "Packed: " << relative_path.string() << std::endl;
+        
+        // 打印信息（软链接在上面已经打印了）
+        if (!S_ISLNK(header.mode)) {
+            std::cout << "Packed: " << relative_path.string() << std::endl;
+        }
 
         if (S_ISREG(header.mode) && header.size > 0) {
             std::ifstream source_file(full_path, std::ios::binary);
@@ -286,6 +310,27 @@ void unpack_internal(const fs::path& archive_file_path, const fs::path& destinat
         
         if (S_ISDIR(header.mode)) {
             fs::create_directories(full_path);
+        } else if (S_ISLNK(header.mode)) {
+            // 处理软链接
+            if (strlen(header.link_target) > 0) {
+                // 确保父目录存在
+                if (full_path.has_parent_path()) {
+                    fs::create_directories(full_path.parent_path());
+                }
+                // 如果文件已存在（使用 lstat 检查，不解引用软链接）
+                struct stat st;
+                if (lstat(full_path.c_str(), &st) == 0) {
+                    // 文件存在，删除它
+                    unlink(full_path.c_str());
+                }
+                // 创建软链接
+                if (symlink(header.link_target, full_path.c_str()) == 0) {
+                    std::cout << "Unpacked symlink: " << full_path.string() << " -> " << header.link_target << std::endl;
+                } else {
+                    std::cerr << "Warning: Failed to create symlink: " << full_path << " -> " << header.link_target 
+                              << " (errno: " << errno << ")" << std::endl;
+                }
+            }
         } else if (S_ISREG(header.mode)) {
             // --- 修改硬链接处理逻辑 ---
             if (header.size == 0 && strlen(header.link_target) > 0) {
@@ -310,16 +355,24 @@ void unpack_internal(const fs::path& archive_file_path, const fs::path& destinat
 
             }
         }
-        
-        // 元数据恢复逻辑保持不变，但硬链接副本的元数据会在后面处理
-        if (header.size != 0 || strlen(header.link_target) == 0) {
+
+        // 元数据恢复逻辑
+        if (S_ISLNK(header.mode)) {
+            // 软链接：使用 lchown（不会解引用），软链接本身没有权限位
+            lchown(full_path.c_str(), header.uid, header.gid);
+            // 注意：大多数系统不支持修改软链接的时间戳，所以跳过 utime
+        } else if (header.size != 0 || strlen(header.link_target) == 0) {
+            // 普通文件和目录：正常恢复元数据
             chmod(full_path.c_str(), header.mode);
             chown(full_path.c_str(), header.uid, header.gid);
             struct utimbuf new_times = {header.mtime, header.mtime};
             utime(full_path.c_str(), &new_times);
         }
         
-        std::cout << "Unpacked: " << full_path.string() << std::endl;
+        // 打印信息（软链接在上面已经打印了）
+        if (!S_ISLNK(header.mode)) {
+            std::cout << "Unpacked: " << full_path.string() << std::endl;
+        }
     }
     archive_file.close(); // 关闭文件流
 

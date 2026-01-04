@@ -51,7 +51,10 @@ void run_auto_backup(const AutoBackupOptions& options) {
     std::cout << "Source: " << options.source_dir << std::endl;
     std::cout << "Destination: " << new_backup_filepath << std::endl;
 
-    pack(options.source_dir, new_backup_filepath, options.filters, options.password, options.use_compression);
+    if (!pack(options.source_dir, new_backup_filepath, options.filters, options.password, options.use_compression)) {
+        std::cerr << "Error: Backup failed!" << std::endl;
+        return;
+    }
 
     std::cout << "\n=== Automatic Backup Task Finished ===" << std::endl;
 }

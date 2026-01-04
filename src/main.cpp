@@ -71,11 +71,9 @@ int main(int argc, char* argv[]) {
         }
         
         if (command == "pack") {
-            pack(source, destination, filters, password, use_compression);
-            success = true; 
+            success = pack(source, destination, filters, password, use_compression);
         } else {
-            unpack(source, destination, password, use_compression);
-            success = true; 
+            success = unpack(source, destination, password, use_compression);
         }
 
     } else if (command == "auto-backup") {
